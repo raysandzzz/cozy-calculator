@@ -1,6 +1,9 @@
 package com.example.cozycalculator.domain
 
 import net.objecthunter.exp4j.ExpressionBuilder
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
+import java.util.Locale
 
 class CalculatorEngine {
 
@@ -13,6 +16,7 @@ class CalculatorEngine {
                 .replace("X", "*")
                 .replace("x", "*")
                 .replace("÷", "/")
+                .replace(" ", "") // Eliminamos todos los espacios vacíos para que la libreria funcione
 
             // 2. La librería evalúa respetando jerarquía y paréntesis
             val result = ExpressionBuilder(sanitized).build().evaluate()
@@ -25,10 +29,13 @@ class CalculatorEngine {
     }
 
     private fun formatResult(value: Double): String {
+        val symbols = DecimalFormatSymbols(Locale.US)
+
         return if (value % 1.0 == 0.0) {
             value.toLong().toString()
         } else {
-            value.toString()
+            val df = DecimalFormat("#.######", symbols)
+            df.format(value)
         }
     }
 }

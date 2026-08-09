@@ -43,7 +43,7 @@ class CalculatorViewModel : ViewModel() {
                 }
                 // Añadimos espacios alrededor del operador para que se vea limpio
                 _state.update { it.copy(
-                    expression = it.expression + " ${action.symbol} "
+                    expression = it.expression + symbolToAppend
                 ) }
             }
             CalculatorAction.Clear -> {
