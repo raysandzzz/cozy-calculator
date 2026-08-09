@@ -39,11 +39,11 @@ class SoundManager(private val context: Context) {
 
     fun playClick(isSoundEnabled: Boolean) {
         if (isSoundEnabled && clickSoundId != 0) {
-            soundPool?.play(clickSoundId, 1f, 1f, 0, 0, 1f)
+            soundPool?.play(clickSoundId, 0.3f, 0.3f, 0, 0, 1f)
             if (lastStreamId != 0) {
                 soundPool?.stop(lastStreamId)
             }
-            lastStreamId = soundPool?.play(clickSoundId, 1f, 1f, 0, 0, 1f) ?: 0
+            lastStreamId = soundPool?.play(clickSoundId, 0.3f, 0.3f, 0, 0, 1f) ?: 0
         }
     }
 

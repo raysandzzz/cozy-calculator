@@ -55,6 +55,14 @@ val MinecraftFont = FontFamily(
     Font(R.font.minecraft)
 )
 
+// Color display dia
+val displayDayBackgroundColor = 0xFFB8E0B0
+val displayDayTextColor = 0xFF1B2A1E
+
+// Color display noche
+val displayNightBackgroundColor = 0xFF1B2A1E
+val displayNightTextColor = 0xFFF0EFEA
+
 @Composable
 fun CalculatorScreen() {
     // Variable de estado para ver texto en la pantalla
@@ -138,15 +146,20 @@ fun CalculatorScreen() {
                     checked = isDarkMode,
                     onCheckedChange = { isDarkMode = it }
                 )
+
+                Spacer(modifier = Modifier
+                    .height(64.dp)
+                )
+
             }
 
             // Área de texto/numeros
-            DisplaySection(displayTextVar)
+            DisplaySection(displayTextVar, isDarkMode)
 
             Box(modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .offset(y = 32.dp),
+                .offset(x = -4.dp, y = 31.dp),
                 contentAlignment = Alignment.BottomStart
             ) {
                 Image(
@@ -198,16 +211,26 @@ fun PixelDashedDivider(
 }
 
 @Composable
-fun DisplaySection(displayText: String) {
+fun DisplaySection(displayText: String, darkMode: Boolean) {
+    val display_color = if (darkMode) {
+        displayNightBackgroundColor
+    } else {
+        displayDayBackgroundColor
+    }
 
-    val displayBackgroundColor = Color(0xFF1B2A1E)
+    val display_text_color = if (darkMode) {
+        displayNightTextColor
+    } else {
+        displayDayTextColor
+    }
+
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(125.dp)
             .border(width = 4.dp, color = Color(0xFF000000), shape = CutCornerShape(12.dp))
-            .background(color = Color(0xFF2C5346), shape = CutCornerShape(12.dp)
+            .background(color = Color(display_color), shape = CutCornerShape(12.dp)
             )
             .padding(start = 32.dp, top = 32.dp, end = 32.dp, bottom = 16.dp)
     ) {
@@ -220,7 +243,7 @@ fun DisplaySection(displayText: String) {
                 text = "22 + 78",
                 fontSize = 20.sp,
                 fontFamily = MinecraftFont,
-                color = Color(0xFFF0EFEA)
+                color = Color(display_text_color)
             )
 
             PixelDashedDivider()
@@ -229,12 +252,14 @@ fun DisplaySection(displayText: String) {
                 text = displayText,
                 fontSize = 32.sp,
                 fontFamily = MinecraftFont,
-                color = Color(0xFFF0EFEA)
+                color = Color(display_text_color)
             )
         }
     }
+
     Spacer(modifier = Modifier
-        .height(32.dp))
+        .height(32.dp)
+    )
 }
 
 @Composable
