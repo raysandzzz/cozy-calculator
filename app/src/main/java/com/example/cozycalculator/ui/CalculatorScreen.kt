@@ -2,10 +2,7 @@ package com.example.cozycalculator.ui
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
-import android.content.Context
-import android.media.AudioAttributes
-import android.media.MediaPlayer
-import android.media.SoundPool
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -48,7 +45,12 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.Dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.cozycalculator.R
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.LifecycleEventObserver
+
 
 // Variable de fuente de texto
 val MinecraftFont = FontFamily(
@@ -56,17 +58,61 @@ val MinecraftFont = FontFamily(
 )
 
 // Color display dia
-val displayDayBackgroundColor = 0xFFB8E0B0
-val displayDayTextColor = 0xFF1B2A1E
+const val displayDayBackgroundColor = 0xFFB8E0B0
+const val displayDayTextColor = 0xFF1B2A1E
 
 // Color display noche
-val displayNightBackgroundColor = 0xFF1B2A1E
-val displayNightTextColor = 0xFFF0EFEA
+const val displayNightBackgroundColor = 0xFF1B2A1E
+const val displayNightTextColor = 0xFFF0EFEA
+
+// Error text color
+const val pastelRed = 0xFFFF6B6B
 
 @Composable
-fun CalculatorScreen() {
-    // Variable de estado para ver texto en la pantalla
-    var displayTextVar by remember { mutableStateOf("0") }
+fun CalculatorScreen(
+    viewModel: CalculatorViewModel = viewModel()
+) {
+
+    val context = LocalContext.current
+
+    // Instancia persistente del gestor de audio
+    val soundManager = remember { SoundManager(context) }
+
+    // Estado del interruptor de audio
+    var isSoundEnabled by remember { mutableStateOf(true) }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Escucha cuando la app entra en pausa o regresa a primer plano
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE -> {
+                    // Se ejecuta al presionar Home, minimizar o cambiar de app
+                    soundManager.toggleMusic(isSoundEnabled = false)
+                }
+                Lifecycle.Event.ON_RESUME -> {
+                    // Se ejecuta al volver a abrir la app
+                    if (isSoundEnabled) {
+                        soundManager.toggleMusic(isSoundEnabled = true)
+                    }
+                }
+                Lifecycle.Event.ON_DESTROY -> {
+                    // Libera los recursos de audio al cerrar la app definitivamente
+                    soundManager.release()
+                }
+                else -> {}
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    val state by viewModel.state.collectAsState()
 
     // 1. Estado para controlar si el modo noche está activo
     var isDarkMode by remember { mutableStateOf(false) }
@@ -77,14 +123,6 @@ fun CalculatorScreen() {
     } else {
         R.drawable.backgroundday // Tu imagen de fondo diurno
     }
-
-    val context = LocalContext.current
-
-    // Instancia persistente del gestor de audio
-    val soundManager = remember { SoundManager(context) }
-
-    // Estado del interruptor de audio
-    var isSoundEnabled by remember { mutableStateOf(true) }
 
     // Sincronizar música según el estado del switch o al salir de la pantalla
     LaunchedEffect(isSoundEnabled) {
@@ -136,7 +174,6 @@ fun CalculatorScreen() {
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-
                 Text(
                     text = if (isDarkMode) "🌙" else "☀️",
                     fontSize = 20.sp
@@ -154,12 +191,16 @@ fun CalculatorScreen() {
             }
 
             // Área de texto/numeros
-            DisplaySection(displayTextVar, isDarkMode)
+            DisplaySection(
+                isDarkMode,
+                expression = state.expression,
+                result = state.result
+            )
 
             Box(modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .offset(x = -4.dp, y = 31.dp),
+                .offset(x = (-4).dp, y = 31.dp),
                 contentAlignment = Alignment.BottomStart
             ) {
                 Image(
@@ -172,6 +213,7 @@ fun CalculatorScreen() {
 
             // Área donde van los botones
             KeypadSection(
+                onAction = viewModel::onAction,
                 soundManager = soundManager,
                 isSoundEnabled = isSoundEnabled
             )
@@ -183,6 +225,7 @@ fun CalculatorScreen() {
         }
     }
 }
+
 
 // Funcion que crea la linea separadora en la pantalla de numeros
 @Composable
@@ -211,26 +254,25 @@ fun PixelDashedDivider(
 }
 
 @Composable
-fun DisplaySection(displayText: String, darkMode: Boolean) {
-    val display_color = if (darkMode) {
+fun DisplaySection(darkMode: Boolean, expression: String, result: String) {
+    val displayColor = if (darkMode) {
         displayNightBackgroundColor
     } else {
         displayDayBackgroundColor
     }
 
-    val display_text_color = if (darkMode) {
+    val displayTextColor = if (darkMode) {
         displayNightTextColor
     } else {
         displayDayTextColor
     }
-
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(125.dp)
             .border(width = 4.dp, color = Color(0xFF000000), shape = CutCornerShape(12.dp))
-            .background(color = Color(display_color), shape = CutCornerShape(12.dp)
+            .background(color = Color(displayColor), shape = CutCornerShape(12.dp)
             )
             .padding(start = 32.dp, top = 32.dp, end = 32.dp, bottom = 16.dp)
     ) {
@@ -240,19 +282,20 @@ fun DisplaySection(displayText: String, darkMode: Boolean) {
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = "22 + 78",
+                text = expression,
+                maxLines = 2,
                 fontSize = 20.sp,
                 fontFamily = MinecraftFont,
-                color = Color(display_text_color)
+                color = Color(displayTextColor)
             )
 
             PixelDashedDivider()
 
             Text(
-                text = displayText,
+                text = result,
                 fontSize = 32.sp,
                 fontFamily = MinecraftFont,
-                color = Color(display_text_color)
+                color = if (result == "Error") Color(pastelRed) else Color(displayTextColor)
             )
         }
     }
@@ -324,6 +367,7 @@ fun RowScope.CalculatorButton(
 
 @Composable
 fun KeypadSection(
+    onAction: (CalculatorAction) -> Unit,
     soundManager: SoundManager,
     isSoundEnabled: Boolean
 ){
@@ -338,25 +382,36 @@ fun KeypadSection(
                 text = "C",
                 normalImageRes = R.drawable.btnc1,
                 pressedImageRes = R.drawable.btnc2,
-                onClick = { soundManager.playClick(isSoundEnabled) }
+                onClick = {
+                    onAction(CalculatorAction.Clear)
+                    soundManager.playClick(isSoundEnabled) }
             )
             CalculatorButton(
                 text = "(",
                 normalImageRes = R.drawable.btnparentleftt1,
                 pressedImageRes = R.drawable.btnparentleftt2,
-                onClick = { soundManager.playClick(isSoundEnabled) }
+                onClick = {
+                    onAction(CalculatorAction.Operation("("))
+                    soundManager.playClick(isSoundEnabled)
+                }
             )
             CalculatorButton(
                 text = ")",
                 normalImageRes = R.drawable.btnparentright1,
                 pressedImageRes = R.drawable.btnparentright2,
-                onClick = { soundManager.playClick(isSoundEnabled) }
+                onClick = {
+                    onAction(CalculatorAction.Operation(")"))
+                    soundManager.playClick(isSoundEnabled)
+                }
             )
             CalculatorButton(
                 text = "/",
                 normalImageRes = R.drawable.btndiv1,
                 pressedImageRes = R.drawable.btndiv2,
-                onClick = { soundManager.playClick(isSoundEnabled) }
+                onClick = {
+                    onAction(CalculatorAction.Operation("÷"))
+                    soundManager.playClick(isSoundEnabled)
+                }
             )
         }
 
@@ -366,25 +421,37 @@ fun KeypadSection(
                 text = "7",
                 normalImageRes = R.drawable.btnsiete1,
                 pressedImageRes = R.drawable.btnsiete2,
-                onClick = { soundManager.playClick(isSoundEnabled) }
+                onClick = {
+                    onAction(CalculatorAction.Number("7"))
+                    soundManager.playClick(isSoundEnabled)
+                }
             )
             CalculatorButton(
                 text = "8",
                 normalImageRes = R.drawable.btnocho1,
                 pressedImageRes = R.drawable.btnocho2,
-                onClick = { soundManager.playClick(isSoundEnabled) }
+                onClick = {
+                    onAction(CalculatorAction.Number("8"))
+                    soundManager.playClick(isSoundEnabled)
+                }
             )
             CalculatorButton(
                 text = "9",
                 normalImageRes = R.drawable.btnnueve1,
                 pressedImageRes = R.drawable.btnnueve2,
-                onClick = { soundManager.playClick(isSoundEnabled) }
+                onClick = {
+                    onAction(CalculatorAction.Number("9"))
+                    soundManager.playClick(isSoundEnabled)
+                }
             )
             CalculatorButton(
                 text = "*",
                 normalImageRes = R.drawable.btnmultit1,
                 pressedImageRes = R.drawable.btnmultit2,
-                onClick = { soundManager.playClick(isSoundEnabled) }
+                onClick = {
+                    onAction(CalculatorAction.Operation("x"))
+                    soundManager.playClick(isSoundEnabled)
+                }
             )
         }
 
@@ -394,25 +461,37 @@ fun KeypadSection(
                 text = "4",
                 normalImageRes = R.drawable.btncuatro1,
                 pressedImageRes = R.drawable.btncuatro2,
-                onClick = { soundManager.playClick(isSoundEnabled) }
+                onClick = {
+                    onAction(CalculatorAction.Number("4"))
+                    soundManager.playClick(isSoundEnabled)
+                }
             )
             CalculatorButton(
                 text = "5",
                 normalImageRes = R.drawable.btncinco1,
                 pressedImageRes = R.drawable.btncinco2,
-                onClick = { soundManager.playClick(isSoundEnabled) }
+                onClick = {
+                    onAction(CalculatorAction.Number("5"))
+                    soundManager.playClick(isSoundEnabled)
+                }
             )
             CalculatorButton(
                 text = "6",
                 normalImageRes = R.drawable.btnseis1,
                 pressedImageRes = R.drawable.btnseis2,
-                onClick = { soundManager.playClick(isSoundEnabled) }
+                onClick = {
+                    onAction(CalculatorAction.Number("6"))
+                    soundManager.playClick(isSoundEnabled)
+                }
             )
             CalculatorButton(
                 text = "-",
                 normalImageRes = R.drawable.btnrest1,
                 pressedImageRes = R.drawable.btnrest2,
-                onClick = { soundManager.playClick(isSoundEnabled) }
+                onClick = {
+                    onAction(CalculatorAction.Operation("-"))
+                    soundManager.playClick(isSoundEnabled)
+                }
             )
         }
 
@@ -422,25 +501,37 @@ fun KeypadSection(
                 text = "1",
                 normalImageRes = R.drawable.btnuno1,
                 pressedImageRes = R.drawable.btnuno2,
-                onClick = { soundManager.playClick(isSoundEnabled) }
+                onClick = {
+                    onAction(CalculatorAction.Number("1"))
+                    soundManager.playClick(isSoundEnabled)
+                }
             )
             CalculatorButton(
                 text = "2",
                 normalImageRes = R.drawable.btndos1,
                 pressedImageRes = R.drawable.btndos2,
-                onClick = { soundManager.playClick(isSoundEnabled) }
+                onClick = {
+                    onAction(CalculatorAction.Number("2"))
+                    soundManager.playClick(isSoundEnabled)
+                }
             )
             CalculatorButton(
                 text = "3",
                 normalImageRes = R.drawable.btntres1,
                 pressedImageRes = R.drawable.btntres2,
-                onClick = { soundManager.playClick(isSoundEnabled) }
+                onClick = {
+                    onAction(CalculatorAction.Number("3"))
+                    soundManager.playClick(isSoundEnabled)
+                }
             )
             CalculatorButton(
                 text = "+",
                 normalImageRes = R.drawable.btnsum1,
                 pressedImageRes = R.drawable.btnsum2,
-                onClick = { soundManager.playClick(isSoundEnabled) }
+                onClick = {
+                    onAction(CalculatorAction.Operation("+"))
+                    soundManager.playClick(isSoundEnabled)
+                }
             )
         }
 
@@ -450,26 +541,38 @@ fun KeypadSection(
                 text = "0",
                 normalImageRes = R.drawable.btncero1,
                 pressedImageRes = R.drawable.btncero2,
-                onClick = { soundManager.playClick(isSoundEnabled) }
+                onClick = {
+                    onAction(CalculatorAction.Number("0"))
+                    soundManager.playClick(isSoundEnabled)
+                }
             )
             CalculatorButton(
                 text = ".",
                 normalImageRes = R.drawable.btndot1,
                 pressedImageRes = R.drawable.btndot2,
-                onClick = { soundManager.playClick(isSoundEnabled) }
+                onClick = {
+                    onAction(CalculatorAction.Operation("."))
+                    soundManager.playClick(isSoundEnabled)
+                }
             )
             CalculatorButton(
                 text = "DEL",
                 normalImageRes = R.drawable.btndelete1,
                 pressedImageRes = R.drawable.btndelete2,
-                onClick = { soundManager.playClick(isSoundEnabled) }
+                onClick = {
+                    onAction(CalculatorAction.Delete)
+                    soundManager.playClick(isSoundEnabled)
+                }
             )
 
             CalculatorButton(text = "=",
                 containerColor = Color(0xFF81C784),
                 normalImageRes = R.drawable.btnequal1,
                 pressedImageRes = R.drawable.btnequal2,
-                onClick = { soundManager.playClick(isSoundEnabled) }
+                onClick = {
+                    onAction(CalculatorAction.Calculate)
+                    soundManager.playClick(isSoundEnabled)
+                }
             )
         }
     }

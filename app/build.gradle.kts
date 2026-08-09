@@ -59,4 +59,12 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+
+    implementation("net.objecthunter:exp4j:0.4.8")
+
+    val lifecycleVersion = "2.8.4" // Use the latest stable version
+    // Core ViewModel dependency for Kotlin
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:${lifecycleVersion}")
+
 }
