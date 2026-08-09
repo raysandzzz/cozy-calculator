@@ -10,7 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.cozycalculator.R
-import com.example.cozycalculator.ui.CalculatorAction
+import com.example.cozycalculator.domain.CalculatorAction
 import com.example.cozycalculator.managers.SoundManager
 
 @Composable

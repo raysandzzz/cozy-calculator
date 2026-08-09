@@ -36,6 +36,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.cozycalculator.R
 import androidx.compose.runtime.DisposableEffect
 import androidx.lifecycle.LifecycleEventObserver
+import com.example.cozycalculator.domain.CalculatorViewModel
 import com.example.cozycalculator.managers.SoundManager
 import com.example.cozycalculator.ui.components.DisplaySection
 import com.example.cozycalculator.ui.components.KeypadSection
