@@ -1,41 +1,28 @@
 package com.example.cozycalculator.ui
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.*
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.imageResource
@@ -44,18 +31,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.cozycalculator.R
 import androidx.compose.runtime.DisposableEffect
 import androidx.lifecycle.LifecycleEventObserver
-
-
-// Variable de fuente de texto
-val MinecraftFont = FontFamily(
-    Font(R.font.minecraft)
-)
+import com.example.cozycalculator.managers.SoundManager
+import com.example.cozycalculator.ui.components.DisplaySection
+import com.example.cozycalculator.ui.components.KeypadSection
 
 // Color display dia
 const val displayDayBackgroundColor = 0xFFB8E0B0
@@ -68,11 +51,17 @@ const val displayNightTextColor = 0xFFF0EFEA
 // Error text color
 const val pastelRed = 0xFFFF6B6B
 
+// Variable de fuente de texto
+val MinecraftFont = FontFamily(
+    Font(R.font.minecraft)
+)
+
 @Composable
 fun CalculatorScreen(
     viewModel: CalculatorViewModel = viewModel()
 ) {
 
+    // Variable de contexto
     val context = LocalContext.current
 
     // Instancia persistente del gestor de audio
@@ -81,37 +70,6 @@ fun CalculatorScreen(
     // Estado del interruptor de audio
     var isSoundEnabled by remember { mutableStateOf(true) }
 
-    val lifecycleOwner = LocalLifecycleOwner.current
-
-    // Escucha cuando la app entra en pausa o regresa a primer plano
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            when (event) {
-                Lifecycle.Event.ON_PAUSE -> {
-                    // Se ejecuta al presionar Home, minimizar o cambiar de app
-                    soundManager.toggleMusic(isSoundEnabled = false)
-                }
-                Lifecycle.Event.ON_RESUME -> {
-                    // Se ejecuta al volver a abrir la app
-                    if (isSoundEnabled) {
-                        soundManager.toggleMusic(isSoundEnabled = true)
-                    }
-                }
-                Lifecycle.Event.ON_DESTROY -> {
-                    // Libera los recursos de audio al cerrar la app definitivamente
-                    soundManager.release()
-                }
-                else -> {}
-            }
-        }
-
-        lifecycleOwner.lifecycle.addObserver(observer)
-
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
-
     val state by viewModel.state.collectAsState()
 
     // 1. Estado para controlar si el modo noche está activo
@@ -119,10 +77,12 @@ fun CalculatorScreen(
 
     // 2. Selección del fondo según el estado
     val backgroundRes = if (isDarkMode) {
-        R.drawable.backgroundnight // Tu imagen de fondo nocturno
+        R.drawable.backgroundnight // imagen de fondo nocturno
     } else {
-        R.drawable.backgroundday // Tu imagen de fondo diurno
+        R.drawable.backgroundday // imagen de fondo diurno
     }
+
+    PlaneDetector(soundManager, isSoundEnabled)
 
     // Sincronizar música según el estado del switch o al salir de la pantalla
     LaunchedEffect(isSoundEnabled) {
@@ -135,7 +95,7 @@ fun CalculatorScreen(
         }
     }
 
-    // --- EN TU ICONO / SWITCH DE AUDIO ---
+    // --- ICON SWITCH DE AUDIO ---
     IconButton(onClick = { isSoundEnabled = !isSoundEnabled }) {
         Text(text = if (isSoundEnabled) "🔊" else "🔇", fontSize = 20.sp)
     }
@@ -187,7 +147,6 @@ fun CalculatorScreen(
                 Spacer(modifier = Modifier
                     .height(64.dp)
                 )
-
             }
 
             // Área de texto/numeros
@@ -221,359 +180,41 @@ fun CalculatorScreen(
             Spacer(modifier = Modifier
                 .height(16.dp)
             )
-
         }
     }
 }
 
-
-// Funcion que crea la linea separadora en la pantalla de numeros
+// Función que escucha cuando la app entra en pausa o regresa a primer plano
 @Composable
-fun PixelDashedDivider(
-    color: Color = Color(0xFFFFFDD0),
-    thickness: Dp = 2.dp ) {
-    Canvas(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(thickness)
-    ) {
-        // [Largo del guión, Largo del espacio]
-        val strokeStyle = PathEffect.dashPathEffect(
-            intervals = floatArrayOf(32f, 8f),
-            phase = 0f
-        )
+fun PlaneDetector(soundManager: SoundManager, isSoundEnabled: Boolean) {
 
-        drawLine(
-            color = color,
-            start = Offset(0f, 0f),
-            end = Offset(size.width, 0f),
-            strokeWidth = size.height,
-            pathEffect = strokeStyle
-        )
-    }
-}
+    val lifecycleOwner = LocalLifecycleOwner.current
 
-@Composable
-fun DisplaySection(darkMode: Boolean, expression: String, result: String) {
-    val displayColor = if (darkMode) {
-        displayNightBackgroundColor
-    } else {
-        displayDayBackgroundColor
-    }
-
-    val displayTextColor = if (darkMode) {
-        displayNightTextColor
-    } else {
-        displayDayTextColor
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(125.dp)
-            .border(width = 4.dp, color = Color(0xFF000000), shape = CutCornerShape(12.dp))
-            .background(color = Color(displayColor), shape = CutCornerShape(12.dp)
-            )
-            .padding(start = 32.dp, top = 32.dp, end = 32.dp, bottom = 16.dp)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.End,
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = expression,
-                maxLines = 2,
-                fontSize = 20.sp,
-                fontFamily = MinecraftFont,
-                color = Color(displayTextColor)
-            )
-
-            PixelDashedDivider()
-
-            Text(
-                text = result,
-                fontSize = 32.sp,
-                fontFamily = MinecraftFont,
-                color = if (result == "Error") Color(pastelRed) else Color(displayTextColor)
-            )
-        }
-    }
-
-    Spacer(modifier = Modifier
-        .height(32.dp)
-    )
-}
-
-@Composable
-fun RowScope.CalculatorButton(
-    text: String,
-    containerColor: Color = Color(0xFFE0D3C1),
-    contentColor: Color = Color(0xFF2C2C2C),
-    // Se le pasa una imagen opcionalmente, si no hay, minecraft style se aplica.
-    normalImageRes: Int? = null,
-    pressedImageRes: Int? = null,
-    onClick: () -> Unit = {}
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-
-    // Animación física de hundimiento para cuando NO usas sprite completo
-    val offsetY = if (isPressed && normalImageRes == null) 3.dp else 0.dp
-
-    Box(
-        modifier = Modifier
-            .weight(1f)
-            .aspectRatio(1f)
-            .offset(y = offsetY)
-            // Si hay imágenes/sprites, omitimos el fondo vectorial por defecto
-            .then(
-                if (normalImageRes == null) {
-                    Modifier
-                        .border(3.dp, Color(0xFF5C4033), RectangleShape)
-                        .background(containerColor, RectangleShape)
-                } else Modifier
-            )
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null // Quita el halo gris al presionar
-            ) { onClick() },
-        contentAlignment = Alignment.Center
-    ) {
-        if (normalImageRes != null) {
-            // OPCIÓN A: Usar Sprites/Imágenes
-            val currentImage = if (isPressed && pressedImageRes != null) {
-                pressedImageRes
-            } else {
-                normalImageRes
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE -> {
+                    // Se ejecuta al presionar Home, minimizar o cambiar de app
+                    soundManager.toggleMusic(isSoundEnabled = false)
+                }
+                Lifecycle.Event.ON_RESUME -> {
+                    // Se ejecuta al volver a abrir la app
+                    if (isSoundEnabled) {
+                        soundManager.toggleMusic(isSoundEnabled = true)
+                    }
+                }
+                Lifecycle.Event.ON_DESTROY -> {
+                    // Libera los recursos de audio al cerrar la app definitivamente
+                    soundManager.release()
+                }
+                else -> {}
             }
-
-            Image(
-                painter = painterResource(id = currentImage),
-                contentDescription = text,
-                modifier = Modifier.fillMaxSize()
-            )
-        } else {
-            // OPCIÓN B: Tu diseño vectorial con tipografía Minecraft Font + Hundimiento
-            Text(
-                text = text,
-                fontSize = 24.sp,
-                fontFamily = MinecraftFont,
-                color = contentColor
-            )
-        }
-    }
-}
-
-@Composable
-fun KeypadSection(
-    onAction: (CalculatorAction) -> Unit,
-    soundManager: SoundManager,
-    isSoundEnabled: Boolean
-){
-    Column(modifier = Modifier
-        .fillMaxWidth()
-        .padding(top = 2.dp, start = 16.dp, bottom = 16.dp, end = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        // Fila 1: Botones de control
-        Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-            CalculatorButton(
-                text = "C",
-                normalImageRes = R.drawable.btnc1,
-                pressedImageRes = R.drawable.btnc2,
-                onClick = {
-                    onAction(CalculatorAction.Clear)
-                    soundManager.playClick(isSoundEnabled) }
-            )
-            CalculatorButton(
-                text = "(",
-                normalImageRes = R.drawable.btnparentleftt1,
-                pressedImageRes = R.drawable.btnparentleftt2,
-                onClick = {
-                    onAction(CalculatorAction.Operation("("))
-                    soundManager.playClick(isSoundEnabled)
-                }
-            )
-            CalculatorButton(
-                text = ")",
-                normalImageRes = R.drawable.btnparentright1,
-                pressedImageRes = R.drawable.btnparentright2,
-                onClick = {
-                    onAction(CalculatorAction.Operation(")"))
-                    soundManager.playClick(isSoundEnabled)
-                }
-            )
-            CalculatorButton(
-                text = "/",
-                normalImageRes = R.drawable.btndiv1,
-                pressedImageRes = R.drawable.btndiv2,
-                onClick = {
-                    onAction(CalculatorAction.Operation("÷"))
-                    soundManager.playClick(isSoundEnabled)
-                }
-            )
         }
 
-        // Fila 2: Números 7, 8, 9 y multiplicación
-        Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-            CalculatorButton(
-                text = "7",
-                normalImageRes = R.drawable.btnsiete1,
-                pressedImageRes = R.drawable.btnsiete2,
-                onClick = {
-                    onAction(CalculatorAction.Number("7"))
-                    soundManager.playClick(isSoundEnabled)
-                }
-            )
-            CalculatorButton(
-                text = "8",
-                normalImageRes = R.drawable.btnocho1,
-                pressedImageRes = R.drawable.btnocho2,
-                onClick = {
-                    onAction(CalculatorAction.Number("8"))
-                    soundManager.playClick(isSoundEnabled)
-                }
-            )
-            CalculatorButton(
-                text = "9",
-                normalImageRes = R.drawable.btnnueve1,
-                pressedImageRes = R.drawable.btnnueve2,
-                onClick = {
-                    onAction(CalculatorAction.Number("9"))
-                    soundManager.playClick(isSoundEnabled)
-                }
-            )
-            CalculatorButton(
-                text = "*",
-                normalImageRes = R.drawable.btnmultit1,
-                pressedImageRes = R.drawable.btnmultit2,
-                onClick = {
-                    onAction(CalculatorAction.Operation("x"))
-                    soundManager.playClick(isSoundEnabled)
-                }
-            )
-        }
+        lifecycleOwner.lifecycle.addObserver(observer)
 
-        // Fila 3: 4, 5, 6, Resta
-        Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-            CalculatorButton(
-                text = "4",
-                normalImageRes = R.drawable.btncuatro1,
-                pressedImageRes = R.drawable.btncuatro2,
-                onClick = {
-                    onAction(CalculatorAction.Number("4"))
-                    soundManager.playClick(isSoundEnabled)
-                }
-            )
-            CalculatorButton(
-                text = "5",
-                normalImageRes = R.drawable.btncinco1,
-                pressedImageRes = R.drawable.btncinco2,
-                onClick = {
-                    onAction(CalculatorAction.Number("5"))
-                    soundManager.playClick(isSoundEnabled)
-                }
-            )
-            CalculatorButton(
-                text = "6",
-                normalImageRes = R.drawable.btnseis1,
-                pressedImageRes = R.drawable.btnseis2,
-                onClick = {
-                    onAction(CalculatorAction.Number("6"))
-                    soundManager.playClick(isSoundEnabled)
-                }
-            )
-            CalculatorButton(
-                text = "-",
-                normalImageRes = R.drawable.btnrest1,
-                pressedImageRes = R.drawable.btnrest2,
-                onClick = {
-                    onAction(CalculatorAction.Operation("-"))
-                    soundManager.playClick(isSoundEnabled)
-                }
-            )
-        }
-
-        // Fila 4: 1, 2, 3, Suma
-        Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-            CalculatorButton(
-                text = "1",
-                normalImageRes = R.drawable.btnuno1,
-                pressedImageRes = R.drawable.btnuno2,
-                onClick = {
-                    onAction(CalculatorAction.Number("1"))
-                    soundManager.playClick(isSoundEnabled)
-                }
-            )
-            CalculatorButton(
-                text = "2",
-                normalImageRes = R.drawable.btndos1,
-                pressedImageRes = R.drawable.btndos2,
-                onClick = {
-                    onAction(CalculatorAction.Number("2"))
-                    soundManager.playClick(isSoundEnabled)
-                }
-            )
-            CalculatorButton(
-                text = "3",
-                normalImageRes = R.drawable.btntres1,
-                pressedImageRes = R.drawable.btntres2,
-                onClick = {
-                    onAction(CalculatorAction.Number("3"))
-                    soundManager.playClick(isSoundEnabled)
-                }
-            )
-            CalculatorButton(
-                text = "+",
-                normalImageRes = R.drawable.btnsum1,
-                pressedImageRes = R.drawable.btnsum2,
-                onClick = {
-                    onAction(CalculatorAction.Operation("+"))
-                    soundManager.playClick(isSoundEnabled)
-                }
-            )
-        }
-
-        // Fila 5: 0, Punto, Igual
-        Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-            CalculatorButton(
-                text = "0",
-                normalImageRes = R.drawable.btncero1,
-                pressedImageRes = R.drawable.btncero2,
-                onClick = {
-                    onAction(CalculatorAction.Number("0"))
-                    soundManager.playClick(isSoundEnabled)
-                }
-            )
-            CalculatorButton(
-                text = ".",
-                normalImageRes = R.drawable.btndot1,
-                pressedImageRes = R.drawable.btndot2,
-                onClick = {
-                    onAction(CalculatorAction.Operation("."))
-                    soundManager.playClick(isSoundEnabled)
-                }
-            )
-            CalculatorButton(
-                text = "DEL",
-                normalImageRes = R.drawable.btndelete1,
-                pressedImageRes = R.drawable.btndelete2,
-                onClick = {
-                    onAction(CalculatorAction.Delete)
-                    soundManager.playClick(isSoundEnabled)
-                }
-            )
-
-            CalculatorButton(text = "=",
-                containerColor = Color(0xFF81C784),
-                normalImageRes = R.drawable.btnequal1,
-                pressedImageRes = R.drawable.btnequal2,
-                onClick = {
-                    onAction(CalculatorAction.Calculate)
-                    soundManager.playClick(isSoundEnabled)
-                }
-            )
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 }

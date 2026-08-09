@@ -1,14 +1,14 @@
-package com.example.cozycalculator.ui
+package com.example.cozycalculator.domain
 
 import androidx.lifecycle.ViewModel
-import com.example.cozycalculator.logic.CalculatorEngine
+import com.example.cozycalculator.domain.CalculatorEngine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 // 1. El Estado de la Pantalla
 data class CalculatorState(
-    val expression: String = "", // Lo que escribes arriba (ej: "22 + 78")
+    val expression: String = "", // Lo que se escribe arriba (ej: "22 + 78")
     val result: String = "0"     // El resultado abajo (ej: "100")
 )
 

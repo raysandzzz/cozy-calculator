@@ -1,4 +1,4 @@
-package com.example.cozycalculator.logic
+package com.example.cozycalculator.domain
 
 import net.objecthunter.exp4j.ExpressionBuilder
 

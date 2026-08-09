@@ -1,4 +1,4 @@
-package com.example.cozycalculator.ui
+package com.example.cozycalculator.managers
 
 import android.content.Context
 import android.media.AudioAttributes
@@ -6,7 +6,7 @@ import android.media.MediaPlayer
 import android.media.SoundPool
 import com.example.cozycalculator.R
 
-class SoundManager(private val context: Context) {
+class SoundManager(context: Context) {
 
     private var mediaPlayer: MediaPlayer? = null
     private var soundPool: SoundPool? = null
