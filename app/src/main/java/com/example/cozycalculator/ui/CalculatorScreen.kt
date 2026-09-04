@@ -160,7 +160,7 @@ fun CalculatorScreen(
             Box(modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .offset(x = (-4).dp, y = 31.dp),
+                .offset(x = (-4).dp, y = 38.dp),
                 contentAlignment = Alignment.BottomStart
             ) {
                 Image(
