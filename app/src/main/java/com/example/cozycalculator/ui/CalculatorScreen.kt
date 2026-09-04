@@ -153,8 +153,8 @@ fun CalculatorScreen(
             // Área de texto/numeros
             DisplaySection(
                 isDarkMode,
-                expression = state.expression,
-                result = state.result
+                expression = state.displayExpression,
+                result = state.displayResult
             )
 
             Box(modifier = Modifier

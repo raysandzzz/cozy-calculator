@@ -4,12 +4,21 @@ import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
+import java.util.Locale
 
 // 1. El Estado de la Pantalla
 data class CalculatorState(
     val expression: String = "", // Lo que se escribe arriba (ej: "22 + 78")
     val result: String = "0"     // El resultado abajo (ej: "100")
-)
+) {
+    val displayExpression: String
+        get() = formatExpressionForDisplay(expression)
+
+    val displayResult: String
+        get() = formatExpressionForDisplay(result)
+}
 
 // 2. Las Acciones que el usuario puede hacer
 sealed class CalculatorAction {
@@ -65,5 +74,18 @@ class CalculatorViewModel : ViewModel() {
                 )}
             }
         }
+    }
+}
+
+fun formatExpressionForDisplay(expr: String): String {
+    if (expr.isBlank()) return ""
+
+    val formatter = DecimalFormat("#,###", DecimalFormatSymbols(Locale.US))
+
+    // Regex busca números enteros (secuencias de dígitos) y los formatea con comas
+    val regex = Regex("""\b\d+\b""")
+    return regex.replace(expr) { match ->
+        val num = match.value.toLongOrNull()
+        if (num != null) formatter.format(num) else match.value
     }
 }
