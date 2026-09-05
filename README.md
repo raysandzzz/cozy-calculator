@@ -2,6 +2,12 @@
 
 A pixel art-styled calculator developed in Android Studio with Jetpack Compose.
 
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/809c14d8-2e1b-4ed6-acc3-a62ca918e704" width="28%" />
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://github.com/user-attachments/assets/a29eff3c-c68d-4330-a443-2742a92e0ee7" width="28%" />
+</p>
+
 ### Download:
 * You can download the APK from the Releases section.
 
