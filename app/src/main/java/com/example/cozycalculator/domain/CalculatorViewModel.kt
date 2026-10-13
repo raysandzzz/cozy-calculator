@@ -89,10 +89,16 @@ class CalculatorViewModel : ViewModel() {
             CalculatorAction.Delete -> {
                 val currentExpr = _state.value.expression
                 if (currentExpr.isNotBlank()) {
-                    // Borra el último carácter (manejando los espacios de los operadores si es necesario)
-                    _state.update { it.copy(
-                        expression = currentExpr.dropLast(1).trimEnd()
-                    )}
+                    _state.update {
+                        it.copy(
+                            // Remove the full operator with surrounding spaces if space-terminated
+                            expression = if (currentExpr.endsWith(" ")) {
+                                currentExpr.dropLast(3)
+                            } else {
+                                currentExpr.dropLast(1)
+                            }
+                        )
+                    }
                 }
             }
 
